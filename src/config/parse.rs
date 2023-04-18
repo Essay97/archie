@@ -1,6 +1,10 @@
 use std::io::BufRead;
 
-pub struct Error {
+mod document;
+mod error;
+mod line;
+
+/* pub struct Error {
     problem: LineError,
     line_number: u32,
 }
@@ -10,7 +14,6 @@ pub struct LineError {
     line: String,
     kind: ErrorKind,
 }
-
 #[derive(Debug)]
 pub enum ErrorKind {
     /// An header is opened with \[ but not closed with \] in the same line
@@ -97,9 +100,9 @@ impl ConfigLine {
             kind: ConfigLineKind::Empty,
         }
     }
-}
+} */
 
-pub fn from_buf_read<R: BufRead>(reader: R) -> Vec<Result<ConfigLine, LineError>> {
+pub fn from_buf_reader<R: BufRead>(reader: R) -> Vec<Result<ConfigLine, LineError>> {
     let lines = reader.lines();
 
     let mut config_lines: Vec<Result<ConfigLine, LineError>> = Vec::new();
@@ -117,33 +120,31 @@ pub fn from_buf_read<R: BufRead>(reader: R) -> Vec<Result<ConfigLine, LineError>
     config_lines
 }
 
-fn check_syntax(lines: Vec<Result<ConfigLine, LineError>>) -> Result<(), Error> {
+fn check_syntax(lines: Vec<Result<ConfigLine, LineError>>) -> Vec<Result<(), Error>> {
     let mut template_started = false;
+
+    let mut results: Vec<Result<(), Error>> = Vec::new();
 
     for (i, result) in lines.iter().enumerate() {
         let line_number = u32::try_from(i).unwrap();
         match *result {
-            Err(e) => {
-                return Err(Error {
-                    problem: e,
-                    line_number: line_number,
-                })
-            }
+            Err(e) => results.push(Err(Error {
+                problem: e,
+                line_number: line_number,
+            })),
             Ok(line) => {
                 if !template_started {
                     // Check that template starts with header
                     match line.kind {
-                        ConfigLineKind::File | ConfigLineKind::Folder => {
-                            return Err(Error {
-                                problem: LineError {
-                                    line: line.identifier,
-                                    kind: ErrorKind::MissingHeader,
-                                },
-                                line_number: line_number,
-                            })
-                        }
+                        ConfigLineKind::File | ConfigLineKind::Folder => results.push(Err(Error {
+                            problem: LineError {
+                                line: line.identifier,
+                                kind: ErrorKind::MissingHeader,
+                            },
+                            line_number: line_number,
+                        })),
                         ConfigLineKind::Empty => continue,
-                        ConfigLineKind::Header => return Err(ErrorKind::MissingHeader),
+                        ConfigLineKind::Header => results.push(Err(ErrorKind::MissingHeader)),
                     }
                 } else {
                     // Check that template contains only nodes
