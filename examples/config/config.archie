@@ -1,0 +1,10 @@
+[template1]
+foo/
+bar/
+  file
+  another_one
+  folder/
+
+[template2]
+test/
+one_file

@@ -1,0 +1,9 @@
+templates:
+  foo: 
+    - bar
+  my_folder:
+    - file_1
+    - file_2
+    - subfolder:
+        sub_file
+    
