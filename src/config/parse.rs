@@ -1,3 +1,8 @@
+use self::{
+    error::ParseError,
+    line::{ConfigLine, LineErrorKind},
+};
+use super::Config;
 use std::io::BufRead;
 
 mod document;
@@ -102,25 +107,49 @@ impl ConfigLine {
     }
 } */
 
-pub fn from_buf_reader<R: BufRead>(reader: R) -> Vec<Result<ConfigLine, LineError>> {
+pub fn from_buf_reader<R: BufRead>(reader: R) -> Result<Config, Vec<ParseError>> {
     let lines = reader.lines();
 
-    let mut config_lines: Vec<Result<ConfigLine, LineError>> = Vec::new();
+    let mut config_lines: Vec<Result<ConfigLine, ParseError>> = Vec::new();
 
-    for line in lines {
-        match line {
-            Ok(val) => config_lines.push(ConfigLine::try_from(&val[..])),
-            Err(_) => config_lines.push(Err(LineError {
+    for (i, result) in (0u32..).zip(lines.into_iter()) {
+        match result {
+            Err(e) => config_lines.push(Err(ParseError {
                 line: String::new(),
-                kind: ErrorKind::IO,
+                line_number: i,
+                kind: LineErrorKind::IO,
             })),
+            Ok(line) => {
+                let config_line = match ConfigLine::try_from(&line[..]) {
+                    Err(err) => config_lines.push(Err(ParseError {
+                        line: line,
+                        line_number: i,
+                        kind: err,
+                    })),
+                    Ok(cl) => config_lines.push(Ok(cl)),
+                };
+            }
         }
     }
 
-    config_lines
+    let mut correct_lines: Vec<ConfigLine> = Vec::new();
+    let mut errors: Vec<ParseError> = Vec::new();
+
+    for line in config_lines {
+        match line {
+            Err(e) => errors.push(e),
+            Ok(cl) => correct_lines.push(cl),
+        }
+    }
+
+    if errors.len() > 0 {
+        return Err(errors);
+    }
+
+    document::parse(correct_lines)
 }
 
-fn check_syntax(lines: Vec<Result<ConfigLine, LineError>>) -> Vec<Result<(), Error>> {
+/* fn check_syntax(lines: Vec<Result<ConfigLine, LineError>>) -> Vec<Result<(), Error>> {
     let mut template_started = false;
 
     let mut results: Vec<Result<(), Error>> = Vec::new();
@@ -160,3 +189,4 @@ fn check_syntax(lines: Vec<Result<ConfigLine, LineError>>) -> Vec<Result<(), Err
 
     Ok(())
 }
+ */
