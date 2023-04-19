@@ -1,9 +1,8 @@
-// Structures needed to deserialize config file
-
 use std::collections::HashMap;
 
 use serde::Deserialize;
 
+// Structures needed to deserialize config file
 #[derive(Debug, Deserialize)]
 pub struct ConfigData {
     pub templates: HashMap<String, TemplateData>,
