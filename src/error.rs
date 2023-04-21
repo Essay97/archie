@@ -1,5 +1,5 @@
 use std::{
-    ops::{FromResidual, Try},
+    ops::{ControlFlow, FromResidual, Try},
     process::{ExitCode, Termination},
 };
 
@@ -57,7 +57,10 @@ impl Termination for Exit {
 
 impl FromResidual for Exit {
     fn from_residual(residual: <Self as Try>::Residual) -> Self {
-        todo!()
+        match residual {
+            Ok(_) => Exit::Ok,
+            Err(e) => Exit::Err(e),
+        }
     }
 }
 
@@ -67,10 +70,13 @@ impl Try for Exit {
     type Residual = Result<!>;
 
     fn from_output(output: Self::Output) -> Self {
-        todo!()
+        Self::Ok
     }
 
-    fn branch(self) -> std::ops::ControlFlow<Self::Residual, Self::Output> {
-        todo!()
+    fn branch(self) -> ControlFlow<Self::Residual, Self::Output> {
+        match self {
+            Exit::Ok => ControlFlow::Continue(()),
+            Exit::Err(_) => todo!(),
+        }
     }
 }
