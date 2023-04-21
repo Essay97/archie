@@ -5,16 +5,19 @@ use crate::error;
 
 use self::runner::Runner;
 
-mod runner;
+pub mod runner;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
-    #[arg(short, long)]
     /// Specify a config file
+    #[arg(short, long)]
     pub config: Option<PathBuf>,
+    /// Show debug logs
+    #[arg(long)]
+    pub debug: bool,
 }
 
 #[derive(Subcommand)]

@@ -127,22 +127,25 @@ const DEFAULT_CONFIG_FILE_NAMES: [&str; 4] = [
 ];
 const MAIN_CONFIG_FILE_NAME: &str = "archie.yaml";
 
-pub fn get_file_by_priority(from_cli: &Option<PathBuf>) -> io::Result<File> {
+pub fn get_file_by_priority(from_cli: &Option<PathBuf>) -> error::Result<File> {
     match from_cli {
-        Some(path) => File::open(path),
+        Some(path) => Ok(File::open(path)?),
         None => {
             // Check if working directory contains a config file
             for filename in DEFAULT_CONFIG_FILE_NAMES {
                 let local_file = env::current_dir()?.join(filename);
                 if local_file.exists() {
-                    return File::open(local_file);
+                    dbg!(&local_file);
+                    return Ok(File::open(local_file)?);
                 }
             }
 
             // Try to open default config file in config directory
             match ProjectDirs::from("", "", "archie") {
-                Some(proj_dirs) => File::open(proj_dirs.config_dir().join(MAIN_CONFIG_FILE_NAME)),
-                None => Err(io::ErrorKind::NotFound.into()),
+                Some(proj_dirs) => Ok(File::open(
+                    proj_dirs.config_dir().join(MAIN_CONFIG_FILE_NAME),
+                )?),
+                None => Err(error::Error::IO(io::ErrorKind::NotFound.into())),
             }
         }
     }

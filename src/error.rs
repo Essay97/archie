@@ -1,5 +1,5 @@
 use std::{
-    ops::{ControlFlow, FromResidual, Try},
+    path::PathBuf,
     process::{ExitCode, Termination},
 };
 
@@ -16,11 +16,13 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let detail = match self {
-            Self::IO(err) => format!("{}", *err),
-            Self::Serialization(err) => format!("{}", *err),
+            Self::IO(err) => "could not open configuration file".to_string(),
+            Self::Serialization(_) => {
+                "the configuration file contains an error. Please look into it.\nIf you are unsure about which config file you are using, run `archie list`".to_string()
+            }
             Self::TemplateNotFound(name) => "could not find template ".to_owned() + name,
         };
-        write!(f, "MY STRING Error: {}", detail)
+        write!(f, "\n\nError: {}\n\n", detail)
     }
 }
 
@@ -40,43 +42,31 @@ impl From<serde_yaml::Error> for Error {
 
 pub enum Exit {
     Ok,
-    Err(Error),
+    Err(Error, bool),
 }
 
 impl Termination for Exit {
     fn report(self) -> ExitCode {
         match self {
             Exit::Ok => ExitCode::SUCCESS,
-            Exit::Err(e) => {
-                eprintln!("{}", e);
+            Exit::Err(e, debug) => {
+                if debug {
+                    eprintln!("{:?}", e);
+                } else {
+                    eprintln!("{}", e);
+                }
+
                 ExitCode::FAILURE
             }
         }
     }
 }
 
-impl FromResidual for Exit {
-    fn from_residual(residual: <Self as Try>::Residual) -> Self {
-        match residual {
+impl Exit {
+    pub fn from<T>(value: Result<T>, debug: bool) -> Self {
+        match value {
             Ok(_) => Exit::Ok,
-            Err(e) => Exit::Err(e),
-        }
-    }
-}
-
-impl Try for Exit {
-    type Output = ();
-
-    type Residual = Result<!>;
-
-    fn from_output(output: Self::Output) -> Self {
-        Self::Ok
-    }
-
-    fn branch(self) -> ControlFlow<Self::Residual, Self::Output> {
-        match self {
-            Exit::Ok => ControlFlow::Continue(()),
-            Exit::Err(_) => todo!(),
+            Err(e) => Exit::Err(e, debug),
         }
     }
 }
