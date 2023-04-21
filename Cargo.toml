@@ -9,5 +9,6 @@ description = "Create folder structures"
 
 [dependencies]
 clap = { version = "4.2.2", features = ["derive"] }
+directories = "5.0.0"
 serde = { version = "1.0.160", features = ["derive"] }
 serde_yaml = "0.9.21"

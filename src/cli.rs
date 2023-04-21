@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -7,7 +9,7 @@ pub struct Cli {
     pub command: Commands,
     #[arg(short, long)]
     /// Specify a config file
-    config: Option<String>,
+    pub config: Option<PathBuf>,
 }
 
 #[derive(Subcommand)]
@@ -15,7 +17,7 @@ pub enum Commands {
     /// Build the given template
     Build {
         /// The path where to build the template
-        path: String,
+        path: PathBuf,
         /// The identifier of the template to build
         template: String,
         #[arg(short, long)]

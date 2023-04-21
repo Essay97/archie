@@ -1,10 +1,11 @@
 use clap::Parser;
 use cli::{Cli, Commands};
-use config::{ConfigData, Template};
-use std::fs;
+use config::{Config, ConfigData, Template};
+use std::{env, fs, path::PathBuf};
 
 mod cli;
 mod config;
+mod error;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     /* let config_file = fs::read_to_string("examples/config/.archierc.yaml")?;
@@ -22,17 +23,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cli = Cli::parse();
 
+    let mut config_file = config::get_file_by_priority(&cli.config)?;
+    let config = Config::from_file(&mut config_file)?;
+
     match cli.command {
         Commands::Build {
+            name,
             path,
             template,
-            name,
         } => {
-            build(path, template, name);
+            build(path, template, name, config)?;
         }
     }
 
     Ok(())
 }
 
-fn build(path: String, template_id: String, root_folder_name: Option<String>) {}
+fn build(
+    path: PathBuf,
+    template_id: String,
+    root_folder_name: Option<String>,
+    config: Config,
+) -> Result<(), error::Error> {
+    let template = config
+        .template_by_name(&template_id)
+        .ok_or(error::Error::TemplateNotFound(template_id))?;
+
+    println!("{template:#?}");
+
+    Ok(())
+}
