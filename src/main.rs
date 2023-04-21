@@ -1,3 +1,5 @@
+#![feature(try_trait_v2)]
+
 use clap::Parser;
 use cli::{Cli, Commands};
 use config::Config;
@@ -7,13 +9,15 @@ mod cli;
 mod config;
 mod error;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> error::Exit {
     let cli = Cli::parse();
 
     let mut config_file = config::get_file_by_priority(&cli.config)?;
-    let config = Config::from_file(&mut config_file)?;
+    let config = Config::from_file(&mut config_file);
 
-    match cli.command {
+    let runner = cli::get_runner(cli);
+
+    /* match cli.command {
         Commands::Build {
             name,
             path,
@@ -21,9 +25,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             build(path, template, name, config)?;
         }
-    }
+    } */
 
-    Ok(())
+    error::Exit::Ok
 }
 
 fn build(

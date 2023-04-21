@@ -8,6 +8,8 @@ use std::{
     path::PathBuf,
 };
 
+use crate::error;
+
 // Structures needed to deserialize config file
 #[derive(Debug, Deserialize)]
 pub struct ConfigData {
@@ -132,9 +134,7 @@ pub fn get_file_by_priority(from_cli: &Option<PathBuf>) -> io::Result<File> {
             // Check if working directory contains a config file
             for filename in DEFAULT_CONFIG_FILE_NAMES {
                 let local_file = env::current_dir()?.join(filename);
-                dbg!(&local_file);
                 if local_file.exists() {
-                    dbg!("Opening ", &local_file);
                     return File::open(local_file);
                 }
             }
@@ -153,7 +153,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn from_file(file: &mut File) -> Result<Self, crate::error::Error> {
+    pub fn from_file(file: &mut File) -> error::Result<Self> {
         let mut config_file = String::new();
         file.read_to_string(&mut config_file)?;
 

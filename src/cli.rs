@@ -1,6 +1,10 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
+use crate::error;
+
+use self::runner::Runner;
+
 mod runner;
 
 #[derive(Parser)]
@@ -25,4 +29,8 @@ pub enum Commands {
         /// Set name of the root folder (defaults to template name)
         name: Option<String>,
     },
+}
+
+pub fn get_runner(cli: Cli) -> error::Result<Runner> {
+    Runner::new(cli)
 }
