@@ -132,7 +132,9 @@ pub fn get_file_by_priority(from_cli: &Option<PathBuf>) -> io::Result<File> {
             // Check if working directory contains a config file
             for filename in DEFAULT_CONFIG_FILE_NAMES {
                 let local_file = env::current_dir()?.join(filename);
+                dbg!(&local_file);
                 if local_file.exists() {
+                    dbg!("Opening ", &local_file);
                     return File::open(local_file);
                 }
             }
