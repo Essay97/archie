@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{env, fs, path::Path};
 
 use crate::{
     config::{self, Config},
@@ -9,7 +9,6 @@ use super::{Cli, Commands};
 
 pub struct Runner {
     config: Config,
-    debug: bool,
     command: Commands,
 }
 
@@ -20,7 +19,6 @@ impl Runner {
 
         Ok(Self {
             config,
-            debug: cli.debug,
             command: cli.command,
         })
     }
@@ -31,13 +29,13 @@ impl Runner {
                 path,
                 template,
                 name,
-            } => error::Exit::from(self.build(path, template, name), self.debug),
+            } => self.build(path, template, name).into(),
         }
     }
 
     fn build(
         &self,
-        path: &PathBuf,
+        path: &Path,
         template_id: &String,
         root_folder_name: &Option<String>,
     ) -> error::Result<()> {
@@ -46,7 +44,12 @@ impl Runner {
             .template_by_name(template_id)
             .ok_or(error::Error::TemplateNotFound(template_id.to_owned()))?;
 
-        println!("{template:#?}");
+        path.try_exists()?;
+
+        let base_dir = path.join(root_folder_name.as_ref().unwrap_or(template_id));
+        if base_dir.exists() {
+            return Err(error::Error::RootFolderExistent(base_dir));
+        }
 
         Ok(())
     }
