@@ -15,9 +15,6 @@ pub struct Cli {
     /// Specify a config file
     #[arg(short, long)]
     pub config: Option<PathBuf>,
-    /// Show debug logs
-    #[arg(long)]
-    pub debug: bool,
 }
 
 #[derive(Subcommand)]

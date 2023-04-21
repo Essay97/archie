@@ -1,6 +1,3 @@
-#![feature(try_trait_v2)]
-#![feature(never_type)]
-
 use clap::Parser;
 use cli::Cli;
 
@@ -11,11 +8,9 @@ mod error;
 fn main() -> error::Exit {
     let cli = Cli::parse();
 
-    let debug = cli.debug;
-
     let runner = match cli::get_runner(cli) {
         Ok(r) => r,
-        Err(e) => return error::Exit::Err(e, debug),
+        Err(e) => return error::Exit::Err(e),
     };
 
     runner.run()

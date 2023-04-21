@@ -11,16 +11,22 @@ pub enum Error {
     Serialization(serde_yaml::Error),
     /// Argument is the name of the template that cannot be found
     TemplateNotFound(String),
+    /// Argument is the absolute path of the folder that already exists
+    RootFolderExistent(PathBuf),
+    /// Argument is the absolute path that does not exist
+    PathNotExistent(PathBuf),
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let detail = match self {
-            Self::IO(err) => "could not open configuration file".to_string(),
+            Self::IO(_) => "could not open configuration file.\nIf you are unsure about which config file you are using, run `archie list`".to_string(),
             Self::Serialization(_) => {
                 "the configuration file contains an error. Please look into it.\nIf you are unsure about which config file you are using, run `archie list`".to_string()
             }
             Self::TemplateNotFound(name) => "could not find template ".to_owned() + name,
+            Self::RootFolderExistent(p) => format!("root folder {} already exists", p.display()),
+            Self::PathNotExistent(p) => format!("path {} does not exist", p.display()),
         };
         write!(f, "\n\nError: {}\n\n", detail)
     }
@@ -42,31 +48,26 @@ impl From<serde_yaml::Error> for Error {
 
 pub enum Exit {
     Ok,
-    Err(Error, bool),
+    Err(Error),
 }
 
 impl Termination for Exit {
     fn report(self) -> ExitCode {
         match self {
             Exit::Ok => ExitCode::SUCCESS,
-            Exit::Err(e, debug) => {
-                if debug {
-                    eprintln!("{:?}", e);
-                } else {
-                    eprintln!("{}", e);
-                }
-
+            Exit::Err(e) => {
+                eprintln!("{}", e);
                 ExitCode::FAILURE
             }
         }
     }
 }
 
-impl Exit {
-    pub fn from<T>(value: Result<T>, debug: bool) -> Self {
+impl From<Result<()>> for Exit {
+    fn from(value: Result<()>) -> Self {
         match value {
             Ok(_) => Exit::Ok,
-            Err(e) => Exit::Err(e, debug),
+            Err(e) => Exit::Err(e),
         }
     }
 }
