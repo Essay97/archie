@@ -3,8 +3,8 @@ use serde::Deserialize;
 use std::{
     collections::HashMap,
     env,
-    fs::File,
-    io::{self, Read},
+    fs::{self, File},
+    io::{self, Read, Write},
     path::PathBuf,
 };
 
@@ -35,6 +35,34 @@ impl Node {
         Self {
             name: name.to_string(),
             kind: NodeKind::File,
+        }
+    }
+    /// WARNING: this function creates the template in the current working directory. It's responsibility of the caller
+    ///  to make sure that the current working directory is set correctly BEFORE this funciton call.
+    fn build(&self) -> error::Result<()> {
+        match &self.kind {
+            // if it's a folder, create it recursively
+            // Create this node
+            NodeKind::Folder(children) => fs::create_dir(&self.name)
+                .map_err(|_| error::Error::OnCreateFolder(PathBuf::from(&self.name)))
+                .and_then(|_| {
+                    // set cwd to newly created folder
+                    env::set_current_dir(&self.name)
+                        .map_err(|_| error::Error::OnChangeFolder(PathBuf::from(&self.name)))?;
+                    // iterate over children nodes
+                    if let Some(nodes) = children.as_ref() {
+                        for node in nodes {
+                            node.build()?;
+                        }
+                    }
+                    // back to upper folder
+                    env::set_current_dir("..")
+                        .map_err(|_| error::Error::OnChangeFolder(PathBuf::from("..")))?;
+                    Ok(())
+                }),
+            NodeKind::File => File::create(&self.name)
+                .map(|_| ())
+                .map_err(|_| error::Error::OnCreateFile(PathBuf::from(&self.name))),
         }
     }
 }
@@ -117,6 +145,20 @@ impl Template {
 
         Some(nodes)
     }
+
+    /// WARNING: this function creates the template in the current working directory. It's responsibility of the caller
+    ///  to make sure that the current working directory is set correctly BEFORE this funciton call.
+    pub fn build(&self) -> error::Result<()> {
+        for node in &self.structure {
+            node.build()?;
+        }
+
+        Ok(())
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 const DEFAULT_CONFIG_FILE_NAMES: [&str; 4] = [
@@ -129,23 +171,57 @@ const MAIN_CONFIG_FILE_NAME: &str = "archie.yaml";
 
 pub fn get_file_by_priority(from_cli: &Option<PathBuf>) -> error::Result<File> {
     match from_cli {
-        Some(path) => Ok(File::open(path)?),
+        Some(path) => {
+            File::open(path).map_err(|_| error::Error::FileNotAccessible(path.to_owned()))
+        }
         None => {
             // Check if working directory contains a config file
             for filename in DEFAULT_CONFIG_FILE_NAMES {
-                let local_file = env::current_dir()?.join(filename);
+                let local_file = &env::current_dir()
+                    .map_err(|_| error::Error::CurrentDirectoryUnavailable)?
+                    .join(filename);
                 if local_file.exists() {
-                    dbg!(&local_file);
-                    return Ok(File::open(local_file)?);
+                    return File::open(local_file)
+                        .map_err(|_| error::Error::FileNotAccessible(local_file.to_owned()));
                 }
             }
 
             // Try to open default config file in config directory
             match ProjectDirs::from("", "", "archie") {
-                Some(proj_dirs) => Ok(File::open(
-                    proj_dirs.config_dir().join(MAIN_CONFIG_FILE_NAME),
-                )?),
-                None => Err(error::Error::IO(io::ErrorKind::NotFound.into())),
+                Some(proj_dirs) => {
+                    let config_dir_path = proj_dirs.config_dir();
+
+                    if !crate::path_exists(config_dir_path)? {
+                        print!("Seems like config directory {} is missing. Would you like to create it? [Y/n] ", config_dir_path.display());
+                        io::stdout().flush().map_err(|_| error::Error::OnInput)?;
+                        let mut response = String::new();
+                        let stdin = std::io::stdin();
+
+                        stdin
+                            .read_line(&mut response)
+                            .map_err(|_| error::Error::OnInput)?;
+
+                        response = response.trim().to_owned();
+
+                        if response == "y" || response == "Y" {
+                            fs::create_dir_all(config_dir_path).map_err(|_| {
+                                error::Error::OnCreateFolder(config_dir_path.to_owned())
+                            })?;
+                            println!(
+                                "Created {} folder. Create a {MAIN_CONFIG_FILE_NAME} there",
+                                config_dir_path.display()
+                            );
+                        }
+                        Err(error::Error::Dummy)
+                    } else {
+                        let path = &config_dir_path.join(MAIN_CONFIG_FILE_NAME);
+                        File::open(path).map_err(|e| {
+                            dbg!(e);
+                            error::Error::FileNotAccessible(path.to_owned())
+                        })
+                    }
+                }
+                None => Err(error::Error::NoHomeFolder),
             }
         }
     }
@@ -158,9 +234,11 @@ pub struct Config {
 impl Config {
     pub fn from_file(file: &mut File) -> error::Result<Self> {
         let mut config_file = String::new();
-        file.read_to_string(&mut config_file)?;
+        file.read_to_string(&mut config_file)
+            .map_err(|_| error::Error::WrongFileEncoding)?;
 
-        let config_data: ConfigData = serde_yaml::from_str(&config_file)?;
+        let config_data: ConfigData =
+            serde_yaml::from_str(&config_file).map_err(|_| error::Error::OnDeserialize)?;
 
         let mut config = Config {
             templates: Vec::new(),
@@ -177,5 +255,9 @@ impl Config {
 
     pub fn template_by_name(&self, name: &str) -> Option<&Template> {
         self.templates.iter().find(|t| t.name == name)
+    }
+
+    pub fn templates(&self) -> &Vec<Template> {
+        &self.templates
     }
 }

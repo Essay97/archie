@@ -12,7 +12,7 @@ pub mod runner;
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
-    /// Specify a config file
+    /// Specify a configuration file
     #[arg(short, long)]
     pub config: Option<PathBuf>,
 }
@@ -29,6 +29,8 @@ pub enum Commands {
         /// Set name of the root folder (defaults to template name)
         name: Option<String>,
     },
+    /// List all the templates available
+    List,
 }
 
 pub fn get_runner(cli: Cli) -> error::Result<Runner> {

@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use clap::Parser;
 use cli::Cli;
 
@@ -14,29 +16,9 @@ fn main() -> error::Exit {
     };
 
     runner.run()
-
-    /* match cli.command {
-        Commands::Build {
-            name,
-            path,
-            template,
-        } => {
-            build(path, template, name, config)?;
-        }
-    } */
 }
 
-/* fn build(
-    path: PathBuf,
-    template_id: String,
-    root_folder_name: Option<String>,
-    config: Config,
-) -> error::Result<()> {
-    let template = config
-        .template_by_name(&template_id)
-        .ok_or(error::Error::TemplateNotFound(template_id))?;
-
-    println!("{template:#?}");
-
-    Ok(())
-} */
+fn path_exists(path: &Path) -> error::Result<bool> {
+    path.try_exists()
+        .map_err(|_| error::Error::FileNotAccessible(path.to_path_buf()))
+}
