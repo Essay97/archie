@@ -66,56 +66,28 @@ impl Node {
         }
     }
 
-    fn print(&self, indentation: &mut Vec<bool>, level: &mut usize, last: bool) {
-        match &self.kind {
-            NodeKind::Folder(children) => {
-                self.render_line(indentation, last);
-                if let Some(nodes) = children {
-                    *level += 1;
-                    if indentation.len() > *level {
-                        indentation[*level] = true;
-                    } else {
-                        indentation.push(true)
-                    }
+    fn print(&self) -> Vec<String> {
+        let mut lines: Vec<String> = Vec::new();
 
-                    let mut nodes = nodes.iter().peekable();
-                    while let Some(node) = nodes.next() {
-                        node.print(indentation, level, nodes.peek().is_none());
-                    }
+        // If node is a folder and has children => node is a non-terminal folder, continue printing
+        if let NodeKind::Folder(Some(nodes)) = &self.kind {
+            let mut nodes = nodes.iter().peekable();
 
-                    indentation[*level] = false;
-                    *level -= 1;
-                }
+            while let Some(node) = nodes.next() {
+                let is_last = nodes.peek().is_none();
+                let glyph = if is_last { "└── " } else { "├── " };
 
-                if last {
-                    indentation[*level] = false;
-                }
-            }
-            NodeKind::File => {
-                self.render_line(indentation, last);
-            }
-        }
-    }
+                lines.push(format!("{glyph}{}", node.name));
+                let sub_lines = node.print();
 
-    fn render_line(&self, indentation: &[bool], last: bool) {
-        let mut line = String::new();
-        let mut first = true;
-
-        //println!("{:?}", indentation);
-
-        for i in indentation.iter().rev() {
-            if *i {
-                if first {
-                    let glyph = if last { "└──" } else { "├──" };
-                    line = glyph.to_owned() + &line;
-                    first = false;
-                } else {
-                    line = "│   ".to_owned() + &line;
+                for line in sub_lines {
+                    let pre_glyph = if is_last { "    " } else { "│   " };
+                    lines.push(format!("{pre_glyph}{line}"));
                 }
             }
         }
 
-        println!("{line} {}", self.name);
+        lines
     }
 }
 
@@ -213,14 +185,22 @@ impl Template {
     }
 
     pub fn print(&self) {
-        let mut indentation: Vec<bool> = vec![true];
-        let mut level = 0usize;
-        let mut structure = self.structure.iter().peekable();
-        while let Some(node) = structure.next() {
-            node.print(&mut indentation, &mut level, structure.peek().is_none());
-            /* if structure.peek().is_none() {
-                indentation[level] = false;
-            } */
+        let nodes = &mut self.structure.iter().peekable();
+
+        while let Some(node) = nodes.next() {
+            let is_last = nodes.peek().is_none();
+            let glyph = if is_last { "└── " } else { "├── " };
+
+            // Print current node
+            println!("{glyph}{}", node.name);
+
+            let lines = node.print();
+            let lines = lines.iter().peekable();
+
+            for line in lines {
+                let pre_glyph = if is_last { "    " } else { "│   " };
+                println!("{pre_glyph}{line}");
+            }
         }
     }
 }
@@ -279,10 +259,8 @@ pub fn get_file_by_priority(from_cli: &Option<PathBuf>) -> error::Result<File> {
                         Err(error::Error::Dummy)
                     } else {
                         let path = &config_dir_path.join(MAIN_CONFIG_FILE_NAME);
-                        File::open(path).map_err(|e| {
-                            dbg!(e);
-                            error::Error::FileNotAccessible(path.to_owned())
-                        })
+                        File::open(path)
+                            .map_err(|_e| error::Error::FileNotAccessible(path.to_owned()))
                     }
                 }
                 None => Err(error::Error::NoHomeFolder),
