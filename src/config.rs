@@ -50,7 +50,7 @@ impl Node {
                     env::set_current_dir(&self.name)
                         .map_err(|_| error::Error::OnChangeFolder(PathBuf::from(&self.name)))?;
                     // iterate over children nodes
-                    if let Some(nodes) = children.as_ref() {
+                    if let Some(nodes) = children {
                         for node in nodes {
                             node.build()?;
                         }
@@ -64,6 +64,58 @@ impl Node {
                 .map(|_| ())
                 .map_err(|_| error::Error::OnCreateFile(PathBuf::from(&self.name))),
         }
+    }
+
+    fn print(&self, indentation: &mut Vec<bool>, level: &mut usize, last: bool) {
+        match &self.kind {
+            NodeKind::Folder(children) => {
+                self.render_line(indentation, last);
+                if let Some(nodes) = children {
+                    *level += 1;
+                    if indentation.len() > *level {
+                        indentation[*level] = true;
+                    } else {
+                        indentation.push(true)
+                    }
+
+                    let mut nodes = nodes.iter().peekable();
+                    while let Some(node) = nodes.next() {
+                        node.print(indentation, level, nodes.peek().is_none());
+                    }
+
+                    indentation[*level] = false;
+                    *level -= 1;
+                }
+
+                if last {
+                    indentation[*level] = false;
+                }
+            }
+            NodeKind::File => {
+                self.render_line(indentation, last);
+            }
+        }
+    }
+
+    fn render_line(&self, indentation: &[bool], last: bool) {
+        let mut line = String::new();
+        let mut first = true;
+
+        //println!("{:?}", indentation);
+
+        for i in indentation.iter().rev() {
+            if *i {
+                if first {
+                    let glyph = if last { "└──" } else { "├──" };
+                    line = glyph.to_owned() + &line;
+                    first = false;
+                } else {
+                    line = "│   ".to_owned() + &line;
+                }
+            }
+        }
+
+        println!("{line} {}", self.name);
     }
 }
 
@@ -158,6 +210,18 @@ impl Template {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn print(&self) {
+        let mut indentation: Vec<bool> = vec![true];
+        let mut level = 0usize;
+        let mut structure = self.structure.iter().peekable();
+        while let Some(node) = structure.next() {
+            node.print(&mut indentation, &mut level, structure.peek().is_none());
+            /* if structure.peek().is_none() {
+                indentation[level] = false;
+            } */
+        }
     }
 }
 

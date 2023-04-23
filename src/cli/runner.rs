@@ -31,13 +31,14 @@ impl Runner {
                 name,
             } => self.build(path, template, name).into(),
             Commands::List => self.list().into(),
+            Commands::Info { template } => self.info(template).into(),
         }
     }
 
     fn build(
         &self,
         path: &Path,
-        template_id: &String,
+        template_id: &str,
         root_folder_name: &Option<String>,
     ) -> error::Result<()> {
         let template = self
@@ -49,7 +50,11 @@ impl Runner {
             return Err(error::Error::PathNotExistent(path.to_path_buf()));
         }
 
-        let base_dir = &path.join(root_folder_name.as_ref().unwrap_or(template_id));
+        let base_dir = &path.join(
+            root_folder_name
+                .as_ref()
+                .unwrap_or(&template_id.to_string()),
+        );
         if crate::path_exists(base_dir)? {
             return Err(error::Error::RootFolderExistent(base_dir.to_owned()));
         }
@@ -67,6 +72,18 @@ impl Runner {
         for template in self.config.templates() {
             println!("{}", template.name());
         }
+        Ok(())
+    }
+
+    fn info(&self, template_id: &str) -> error::Result<()> {
+        let template = self
+            .config
+            .template_by_name(template_id)
+            .ok_or(error::Error::TemplateNotFound(template_id.to_owned()))?;
+
+        println!("{template_id}");
+        template.print();
+
         Ok(())
     }
 }

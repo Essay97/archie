@@ -31,6 +31,11 @@ pub enum Commands {
     },
     /// List all the templates available
     List,
+    /// See the structure of a template
+    Info {
+        /// The template for which you want to see the structure
+        template: String,
+    },
 }
 
 pub fn get_runner(cli: Cli) -> error::Result<Runner> {
