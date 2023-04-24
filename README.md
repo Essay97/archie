@@ -12,12 +12,19 @@ You can provide templates based on a configuration file passed in one of the fol
 
 ## Installation
 
+### Homebrew
 You can install Archie via [Homebrew](https://brew.sh/), you just have to add my tap:
 
 ```bash
 brew tap essay97/harrysthings
 brew update
 brew install archie
+```
+
+### Cargo
+If you are a Rust user and are familiar with the tools, you can install Archie directly from [crates.io](https://crates.io/crates/archie) using `cargo`:
+```bash
+cargo install archie
 ```
 
 ## Configuration
