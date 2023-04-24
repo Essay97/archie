@@ -49,3 +49,26 @@ templates:
 Notice that Archie takes into account only the keys of the configuration file, so even files have to be objects, just without body (i.e. with a `null` body).
 
 As a rule of thumb, every YAML element that you want to turn into a file or a folder, has to be followed by a colon.
+
+## Usage
+Your starting point should be `archie help` to have an overview of the functionalities of this tool. 
+It does these simple things: 
+- `archie build <path> <template>` creates the folder structure defined by `template` in the given `path`
+- `archie list` shows the available templates based on the provided configuration file
+- `archie info <template>` shows the structure created by the given `template`. Think of it like some sort of "dry run"
+
+### Example
+Based on the configuration file defined on the previous section:
+```bash
+> archie list
+example
+> archie info example
+example
+├── bar
+├── foo
+│   ├── hello.txt
+│   └── my_folder
+└── file
+> archie build . example 
+## Creates example template in current directory
+```
