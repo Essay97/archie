@@ -13,7 +13,7 @@ use crate::error;
 // Structures needed to deserialize config file
 #[derive(Debug, Deserialize)]
 pub struct ConfigData {
-    pub templates: HashMap<String, TemplateData>,
+    templates: HashMap<String, TemplateData>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -31,12 +31,13 @@ struct Node {
 }
 
 impl Node {
-    fn create_file(name: &str) -> Self {
+    fn new_file(name: &str) -> Self {
         Self {
-            name: name.to_string(),
+            name: name.to_owned(),
             kind: NodeKind::File,
         }
     }
+
     /// WARNING: this function creates the template in the current working directory. It's responsibility of the caller
     ///  to make sure that the current working directory is set correctly BEFORE this funciton call.
     fn build(&self) -> error::Result<()> {
@@ -161,7 +162,7 @@ impl Template {
 
                         nodes.push(folder_node);
                     } else {
-                        nodes.push(Node::create_file(node_name))
+                        nodes.push(Node::new_file(node_name))
                     }
                 }
             }

@@ -10,7 +10,7 @@ mod error;
 fn main() -> error::Exit {
     let cli = Cli::parse();
 
-    let runner = match cli::get_runner(cli) {
+    let runner = match cli::get_runner(&cli) {
         Ok(r) => r,
         Err(e) => return error::Exit::Err(e),
     };
