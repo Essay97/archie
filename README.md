@@ -9,7 +9,6 @@ You can provide templates based on a configuration file passed in one of the fol
     - `$HOME/Library/Application Support/archie` on macOS
     
 ## Installation
-## Installation
 You can install Adventure Engine via [Homebrew](https://brew.sh/), you just have to add my tap:
 ```bash
 brew tap essay97/harrysthings
