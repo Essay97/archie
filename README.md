@@ -8,6 +8,15 @@ You can provide templates based on a configuration file passed in one of the fol
     - `%USERPROFILE%\AppData\Roaming\archie` on Windows
     - `$HOME/Library/Application Support/archie` on macOS
     
+## Installation
+## Installation
+You can install Adventure Engine via [Homebrew](https://brew.sh/), you just have to add my tap:
+```bash
+brew tap essay97/harrysthings
+brew update
+brew install archie
+```
+    
 ## Configuration
 Whatever method you choose to pass the configuration file, the format is always the same: a YAML file with a single root object `templates`. 
 
