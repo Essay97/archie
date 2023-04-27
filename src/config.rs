@@ -6,7 +6,7 @@ use std::{
     env,
     fs::{self, File},
     io::{self, Read, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 // Structures needed to deserialize config file
@@ -238,41 +238,56 @@ pub fn get_file_by_priority(from_cli: &Option<PathBuf>) -> anyhow::Result<File> 
             match ProjectDirs::from("", "", "archie") {
                 Some(proj_dirs) => {
                     let config_dir_path = proj_dirs.config_dir();
+                    let path = &config_dir_path.join(MAIN_CONFIG_FILE_NAME);
 
-                    if !crate::path_exists(config_dir_path)? {
-                        print!("Seems like config directory {} is missing. Would you like to create it? [Y/n] ", config_dir_path.display());
-                        io::stdout()
-                            .flush()
-                            .with_context(|| "a problem occurred while reading user input")?;
-                        let mut response = String::new();
-                        let stdin = std::io::stdin();
-
-                        stdin
-                            .read_line(&mut response)
-                            .with_context(|| "a problem occurred while reading user input")?;
-
-                        response = response.trim().to_owned();
-
-                        if response == "y" || response == "Y" {
-                            fs::create_dir_all(config_dir_path).with_context(|| {
-                                format!("could not create folder {}", config_dir_path.display())
-                            })?;
-                            println!(
-                                "Created {} folder. Create a {MAIN_CONFIG_FILE_NAME} there",
-                                config_dir_path.display()
-                            );
+                    match File::open(path) {
+                        Ok(file) => Ok(file),
+                        Err(e) => {
+                            if let io::ErrorKind::NotFound = e.kind() {
+                                return create_config_dir(config_dir_path);
+                            } else {
+                                return Err(e).with_context(|| {
+                                    format!("could not access file {}", path.display())
+                                });
+                            }
                         }
-                        Err(anyhow!(""))
-                    } else {
-                        let path = &config_dir_path.join(MAIN_CONFIG_FILE_NAME);
-                        File::open(path)
-                            .with_context(|| format!("could not access file {}", path.display()))
                     }
                 }
                 None => Err(anyhow!("could not access home directory")),
             }
         }
     }
+}
+
+// "File" result type just satisfies the compiler but it never really gets reached. The "success" branch exits with exit code 0
+fn create_config_dir(path: &Path) -> anyhow::Result<File> {
+    print!(
+        "Seems like config directory {} is missing. Would you like to create it? [Y/n] ",
+        path.display()
+    );
+    io::stdout()
+        .flush()
+        .with_context(|| "a problem occurred while reading user input")?;
+    let mut response = String::new();
+    let stdin = std::io::stdin();
+
+    stdin
+        .read_line(&mut response)
+        .with_context(|| "a problem occurred while reading user input")?;
+
+    response = response.trim().to_owned();
+
+    if response == "y" || response == "Y" {
+        fs::create_dir_all(path)
+            .with_context(|| format!("could not create folder {}", path.display()))?;
+        println!(
+            "Created {} folder. Create a {MAIN_CONFIG_FILE_NAME} there",
+            path.display()
+        );
+        std::process::exit(0);
+    }
+
+    Err(anyhow!("could not create config folder"))
 }
 
 pub struct Config {

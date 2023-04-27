@@ -45,21 +45,7 @@ impl<'a> Runner<'a> {
             .template_by_name(template_id)
             .ok_or(anyhow!("could not find template {}", template_id))?;
 
-        if !crate::path_exists(path)? {
-            return Err(anyhow::anyhow!("path {} does not exist", path.display()));
-        }
-
-        let base_dir = &path.join(
-            root_folder_name
-                .as_ref()
-                .unwrap_or(&template_id.to_string()),
-        );
-        if crate::path_exists(base_dir)? {
-            return Err(anyhow::anyhow!(
-                "root folder {} already exists",
-                base_dir.display()
-            ));
-        }
+        let base_dir = &path.join(root_folder_name.as_ref().unwrap_or(&template_id.to_owned()));
 
         fs::create_dir(base_dir)
             .with_context(|| format!("could not create folder {}", base_dir.display()))?;
