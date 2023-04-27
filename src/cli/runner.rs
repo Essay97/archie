@@ -72,10 +72,15 @@ impl<'a> Runner<'a> {
     }
 
     fn list(&self) -> anyhow::Result<()> {
-        println!("TEMPLATES");
-        for template in self.config.templates() {
-            println!("{}", template.name());
+        if self.config.templates().is_empty() {
+            println!("No templates available");
+        } else {
+            println!("TEMPLATES");
+            for template in self.config.templates() {
+                println!("{}", template.name());
+            }
         }
+
         Ok(())
     }
 
