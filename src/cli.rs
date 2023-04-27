@@ -1,8 +1,6 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
-use crate::error;
-
 use runner::Runner;
 
 pub mod runner;
@@ -38,6 +36,6 @@ pub enum Commands {
     },
 }
 
-pub fn get_runner(cli: &Cli) -> error::Result<Runner> {
+pub fn get_runner(cli: &Cli) -> anyhow::Result<Runner> {
     Runner::new(cli)
 }

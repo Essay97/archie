@@ -9,8 +9,6 @@ use std::{
     path::PathBuf,
 };
 
-use crate::error;
-
 // Structures needed to deserialize config file
 #[derive(Debug, Deserialize)]
 pub struct ConfigData {
@@ -264,14 +262,14 @@ pub fn get_file_by_priority(from_cli: &Option<PathBuf>) -> anyhow::Result<File> 
                                 config_dir_path.display()
                             );
                         }
-                        Err(error::Error::Dummy.into())
+                        Err(anyhow!(""))
                     } else {
                         let path = &config_dir_path.join(MAIN_CONFIG_FILE_NAME);
                         File::open(path)
                             .with_context(|| format!("could not access file {}", path.display()))
                     }
                 }
-                None => Err(error::Error::NoHomeFolder.into()),
+                None => Err(anyhow!("could not access home directory")),
             }
         }
     }
@@ -285,7 +283,7 @@ impl Config {
     pub fn from_file(file: &mut File) -> anyhow::Result<Self> {
         let mut config_file = String::new();
         file.read_to_string(&mut config_file)
-            .map_err(|_| error::Error::WrongFileEncoding)?;
+            .with_context(|| "could not read config file")?;
 
         let config_data: ConfigData = serde_yaml::from_str(&config_file)
             .with_context(|| "could not deserialize config file")?;

@@ -1,9 +1,8 @@
 use std::{env, fs, path::Path};
 
-use crate::{
-    config::{self, Config},
-    error,
-};
+use anyhow::{anyhow, Context};
+
+use crate::config::{self, Config};
 
 use super::{Cli, Commands};
 
@@ -13,7 +12,7 @@ pub struct Runner<'a> {
 }
 
 impl<'a> Runner<'a> {
-    pub fn new(cli: &'a Cli) -> error::Result<Self> {
+    pub fn new(cli: &'a Cli) -> anyhow::Result<Self> {
         let mut config_file = config::get_file_by_priority(&cli.config)?;
         let config = Config::from_file(&mut config_file)?;
 
@@ -23,15 +22,15 @@ impl<'a> Runner<'a> {
         })
     }
 
-    pub fn run(&self) -> error::Exit {
+    pub fn run(&self) -> anyhow::Result<()> {
         match &self.command {
             Commands::Build {
                 path,
                 template,
                 name,
-            } => self.build(path, template, name).into(),
-            Commands::List => self.list().into(),
-            Commands::Info { template } => self.info(template).into(),
+            } => self.build(path, template, name),
+            Commands::List => self.list(),
+            Commands::Info { template } => self.info(template),
         }
     }
 
@@ -40,14 +39,14 @@ impl<'a> Runner<'a> {
         path: &Path,
         template_id: &str,
         root_folder_name: &Option<String>,
-    ) -> error::Result<()> {
+    ) -> anyhow::Result<()> {
         let template = self
             .config
             .template_by_name(template_id)
-            .ok_or(error::Error::TemplateNotFound(template_id.to_owned()))?;
+            .ok_or(anyhow!("could not find template {}", template_id))?;
 
         if !crate::path_exists(path)? {
-            return Err(error::Error::PathNotExistent(path.to_path_buf()));
+            return Err(anyhow::anyhow!("path {} does not exist", path.display()));
         }
 
         let base_dir = &path.join(
@@ -56,30 +55,35 @@ impl<'a> Runner<'a> {
                 .unwrap_or(&template_id.to_string()),
         );
         if crate::path_exists(base_dir)? {
-            return Err(error::Error::RootFolderExistent(base_dir.to_owned()));
+            return Err(anyhow::anyhow!(
+                "root folder {} already exists",
+                base_dir.display()
+            ));
         }
 
-        fs::create_dir(base_dir).map_err(|_| error::Error::OnCreateFolder(base_dir.to_owned()))?;
+        fs::create_dir(base_dir)
+            .with_context(|| format!("could not create folder {}", base_dir.display()))?;
         env::set_current_dir(base_dir)
-            .map_err(|_| error::Error::OnChangeFolder(base_dir.to_owned()))?;
+            .with_context(|| format!("could not move to folder {}", base_dir.display()))?;
 
         template.build()?;
 
         Ok(())
     }
 
-    fn list(&self) -> error::Result<()> {
+    fn list(&self) -> anyhow::Result<()> {
+        println!("TEMPLATES");
         for template in self.config.templates() {
             println!("{}", template.name());
         }
         Ok(())
     }
 
-    fn info(&self, template_id: &str) -> error::Result<()> {
+    fn info(&self, template_id: &str) -> anyhow::Result<()> {
         let template = self
             .config
             .template_by_name(template_id)
-            .ok_or(error::Error::TemplateNotFound(template_id.to_owned()))?;
+            .ok_or(anyhow!("could not find template {}", template_id))?;
 
         println!("{template_id}");
         template.print();

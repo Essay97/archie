@@ -1,24 +1,21 @@
 use std::path::Path;
 
+use anyhow::Context;
 use clap::Parser;
 use cli::Cli;
 
 mod cli;
 mod config;
-mod error;
 
-fn main() -> error::Exit {
+fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
-    let runner = match cli::get_runner(&cli) {
-        Ok(r) => r,
-        Err(e) => return error::Exit::Err(e),
-    };
+    let runner = cli::get_runner(&cli)?;
 
     runner.run()
 }
 
-fn path_exists(path: &Path) -> error::Result<bool> {
+fn path_exists(path: &Path) -> anyhow::Result<bool> {
     path.try_exists()
-        .map_err(|_| error::Error::FileNotAccessible(path.to_path_buf()))
+        .with_context(|| format!("could not open file {}", path.display()))
 }
