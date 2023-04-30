@@ -28,9 +28,21 @@ impl<'a> Runner<'a> {
                 path,
                 template,
                 name,
-            } => self.build(path, template, name),
+            } => {
+                let template_id = match template {
+                    Some(t) => t,
+                    None => match self.config.favorite() {
+                        Some(templ) => templ,
+                        None => {
+                            return Err(anyhow!("must set template via parameter or configuration"))
+                        }
+                    },
+                };
+                self.build(path, template_id, name)
+            }
             Commands::List => self.list(),
             Commands::Info { template } => self.info(template),
+            Commands::Debug => Ok(println!("{:?}", self.config)),
         }
     }
 

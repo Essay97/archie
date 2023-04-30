@@ -13,6 +13,7 @@ use std::{
 #[derive(Debug, Deserialize)]
 pub struct ConfigData {
     templates: HashMap<String, TemplateData>,
+    favorite: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -244,11 +245,11 @@ pub fn get_file_by_priority(from_cli: &Option<PathBuf>) -> anyhow::Result<File> 
                         Ok(file) => Ok(file),
                         Err(e) => {
                             if let io::ErrorKind::NotFound = e.kind() {
-                                return create_config_dir(config_dir_path);
+                                create_config_dir(config_dir_path)
                             } else {
-                                return Err(e).with_context(|| {
+                                Err(e).with_context(|| {
                                     format!("could not access file {}", path.display())
-                                });
+                                })
                             }
                         }
                     }
@@ -290,8 +291,10 @@ fn create_config_dir(path: &Path) -> anyhow::Result<File> {
     Err(anyhow!("could not create config folder"))
 }
 
+#[derive(Debug)]
 pub struct Config {
     templates: Vec<Template>,
+    favorite: Option<String>,
 }
 
 impl Config {
@@ -305,6 +308,7 @@ impl Config {
 
         let mut config = Config {
             templates: Vec::new(),
+            favorite: config_data.favorite,
         };
 
         for (name, data) in config_data.templates {
@@ -322,5 +326,9 @@ impl Config {
 
     pub fn templates(&self) -> &Vec<Template> {
         &self.templates
+    }
+
+    pub fn favorite(&self) -> &Option<String> {
+        &self.favorite
     }
 }

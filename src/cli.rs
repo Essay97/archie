@@ -22,7 +22,7 @@ pub enum Commands {
         /// The path where to build the template
         path: PathBuf,
         /// The identifier of the template to build
-        template: String,
+        template: Option<String>,
         #[arg(short, long)]
         /// Set name of the root folder (defaults to template name)
         name: Option<String>,
@@ -34,6 +34,8 @@ pub enum Commands {
         /// The template for which you want to see the structure
         template: String,
     },
+    /// All debug purposes
+    Debug,
 }
 
 pub fn get_runner(cli: &Cli) -> anyhow::Result<Runner> {

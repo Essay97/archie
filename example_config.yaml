@@ -1,3 +1,4 @@
 templates:
   foo:
   bar:
+favorite: foo
